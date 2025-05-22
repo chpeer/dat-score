@@ -7,13 +7,15 @@ authors = [
 ]
 readme = "README.md"
 license = "MIT"
-package-mode = false
 requires-python = ">=3.11"
 dependencies = [
 "numpy (>=2.2.6,<3.0.0)",
 "scipy (>=1.15.3,<2.0.0)",
 "divergent-association-task @ git+https://github.com/chpeer/divergent-association-task.git"
 ]
+
+[tool.poetry]
+package-mode = false
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0.0,<9.0.0"
