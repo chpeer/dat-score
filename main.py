@@ -4,7 +4,7 @@ Main module for the creativity_score project.
 
 import csv
 import sys
-from dat_src.dat import Model
+from dat import Model
 
 NOUNS_HEADER: str = 'test'
 CREATIVITY_SCORE_HEADER: str = f'{NOUNS_HEADER}_hello'
