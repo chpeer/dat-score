@@ -6,8 +6,8 @@ import csv
 import sys
 from dat import Model
 
-NOUNS_HEADER: str = 'test'
-CREATIVITY_SCORE_HEADER: str = f'{NOUNS_HEADER}_hello'
+NOUNS_HEADERS: list[str] = [f'DAT_{i}' for i in range(1, 11)]
+CREATIVITY_SCORE_HEADER: str = 'creativity_score'
 MIN_WORD_COUNT: int = 7
 
 
@@ -22,39 +22,49 @@ def main() -> None:
         # Initialize the DAT model (requires GloVe and words.txt files in the correct location)
         dat_model = Model(
             model="word_vector/glove.840B.300d.txt",  # Updated path
-            dictionary="dat_src/words.txt"
+            dictionary=".venv/src/divergent-association-task/words.txt"
         )
         with open(file_path, mode='r', newline='', encoding='utf-8') as csvfile, \
              open(output_path, mode='w', newline='', encoding='utf-8') as outfile:
             reader = csv.reader(csvfile)
             writer = csv.writer(outfile)
             header = next(reader)
-            if NOUNS_HEADER not in header:
-                print(f"Column '{NOUNS_HEADER}' not found in CSV header.")
+            # Check all required DAT columns exist
+            if not all(col in header for col in NOUNS_HEADERS):
+                print(f"One or more DAT columns ({NOUNS_HEADERS}) not found in CSV header.")
                 return
-            nouns_col_idx = header.index(NOUNS_HEADER)
+            # Get indices for DAT columns
+            nouns_col_indices = [header.index(col) for col in NOUNS_HEADERS]
             # Write new header with additional column
             writer.writerow(header + [CREATIVITY_SCORE_HEADER])
+            # Write metadata rows (rows 2 and 3) unchanged
+            metadata_rows = []
+            for _ in range(2):
+                try:
+                    metadata_row = next(reader)
+                    writer.writerow(metadata_row + [''])
+                except StopIteration:
+                    break
             for row in reader:
-                # Compute creativity score using dat_model.dat
-                if len(row) > nouns_col_idx:
-                    # Split the cell into words (space-separated)
-                    nouns = row[nouns_col_idx].split()
-                    try:
-                        score = dat_model.dat(nouns, minimum=MIN_WORD_COUNT)
-                        if score is None:
-                            print(f"Not enough valid words in row: {row}")
-                            new_value = 'not enough words'
-                        else:
-                            new_value = str(score)
-                    except Exception as e:
-                        new_value = f'error: {e}'
-                else:
-                    new_value = ''
+                # Collect nouns from the DAT columns
+                nouns = [row[idx] for idx in nouns_col_indices if idx < len(row) and row[idx].strip()]
+                try:
+                    score = dat_model.dat(nouns, minimum=MIN_WORD_COUNT)
+                    if score is None:
+                        print(f"Not enough valid words in row: {row}")
+                        new_value = 'not enough words'
+                    else:
+                        new_value = str(score)
+                    # Print nouns and creativity score to stdout
+                    print(f"Nouns: {nouns} | Creativity Score: {new_value}")
+                except Exception as e:
+                    new_value = f'error: {e}'
+                    print(f"Nouns: {nouns} | Creativity Score: {new_value}")
                 writer.writerow(row + [new_value])
         print(f"Output written to {output_path}")
-    except FileNotFoundError:
-        print(f"File not found: {file_path}")
+    except FileNotFoundError as e:
+       # print(f"File not found: {file_path}")
+       print(e)
     except Exception as e:
         print(f"An error occurred: {e}")
 
