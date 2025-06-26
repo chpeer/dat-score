@@ -1,0 +1,31 @@
+/* dat_score_app.css - Styles for DAT Score Calculator tables */
+
+.table-scroll {
+  overflow-x: auto;
+  max-width: 100vw;
+}
+
+.dat-table {
+  border-collapse: collapse;
+  min-width: 600px;
+  font-size: 14px;
+}
+
+.dat-table th, .dat-table td {
+  padding: 4px 8px;
+}
+
+.dat-table thead {
+  position: sticky;
+  top: 0;
+  background: #f2f2f2;
+  z-index: 1;
+}
+
+.dat-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.dat-table tr:nth-child(odd) {
+  background-color: #fff;
+}
