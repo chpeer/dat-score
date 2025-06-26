@@ -11,7 +11,8 @@ requires-python = ">=3.11"
 dependencies = [
 "numpy (>=2.2.6,<3.0.0)",
 "scipy (>=1.15.3,<2.0.0)",
-"divergent-association-task @ git+https://github.com/chpeer/divergent-association-task.git"
+"divergent-association-task @ git+https://github.com/chpeer/divergent-association-task.git",
+"flask >=2.0.0,<4.0.0"
 ]
 
 [tool.poetry]
