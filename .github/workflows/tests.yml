@@ -1,0 +1,69 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: [3.11, 3.12]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    
+    - name: Cache Poetry dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          venv-${{ runner.os }}-${{ matrix.python-version }}-
+    
+    - name: Install dependencies
+      run: poetry install
+    
+    - name: Create word_vector directory (for testing)
+      run: |
+        mkdir -p word_vector
+        echo "Mock word vector files for testing" > word_vector/words.txt
+        echo "Mock GloVe vectors for testing" > word_vector/glove.840B.300d.txt
+    
+    - name: Run tests
+      run: poetry run python run_tests.py
+      env:
+        FLASK_ENV: testing
+        SECRET_KEY: test-secret-key
+    
+    - name: Run tests with coverage (if coverage is available)
+      run: |
+        poetry add --group dev pytest-cov
+        poetry run pytest test_main.py --cov=main --cov-report=xml --cov-report=term-missing
+      env:
+        FLASK_ENV: testing
+        SECRET_KEY: test-secret-key
+      continue-on-error: true
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+      continue-on-error: true 

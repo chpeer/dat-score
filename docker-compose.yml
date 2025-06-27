@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  dat-score-app:
+    build: .
+    image: dat-score-app:latest
+    container_name: dat-score-app
+    ports:
+      - "8080:8080"
+    environment:
+      - SECRET_KEY=replace-this-with-a-strong-random-value
+    volumes:
+      - ./word_vector:/app/word_vector:ro
+    restart: unless-stopped

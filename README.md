@@ -1,42 +1,102 @@
-# Divergent Association Task (DAT) score CSV calculator
+<!--
+NOTE: This project was created with the assistance of AI. It is not intended for production use and must not be exposed to the internet. The server and code are not security-audited and may contain vulnerabilities. Use only in a safe, isolated environment for demonstration or research purposes.
+-->
+# DAT Score Web App
 
-This project computes a creativity score for each row in a CSV file using the Divergent Association Task (DAT) model. The DAT model measures creativity by analyzing the semantic distance between words provided in a specific column of your CSV file (default column: `test`).
+This project provides a web interface for calculating Divergent Association Task (DAT) creativity scores from CSV files using GloVe word vectors.
 
-- The script reads your CSV file, extracts the words from the specified column, and uses a pre-trained GloVe word embedding model to compute the semantic distances between the words.
-- If there are at least 7 valid words in the row, the script calculates the average semantic distance (the DAT score) and writes it to a new column in the output CSV file.
-- If there are not enough valid words, the script notes this in the output.
-- The output CSV file will have the same data as the input, with an additional column containing the creativity score for each row.
+## Features
+- Upload CSV files and preview data
+- Select columns and set minimum word count for DAT calculation
+- Set number of rows to skip (header/metadata)
+- Calculate and download creativity scores
+- Containerized deployment
 
-This approach leverages natural language processing and vectorized operations (via NumPy) for efficient computation. The DAT model and methodology are based on research published in PNAS: [Naming unrelated words predicts creativity](https://www.pnas.org/content/118/25/e2022340118).
+## Requirements
+- Docker (and optionally Docker Compose)
+- Python 3.12+ (for local development)
+- GloVe vectors and words list (see `word_vector/`)
 
-## Setup Instructions
+  **Download GloVe:**
+  - [GloVe 840B 300d (2.03 GB)](https://nlp.stanford.edu/data/glove.840B.300d.zip)
+  - Unzip and place `glove.840B.300d.txt` and `words.txt` in the `word_vector/` directory.
 
-1. **Install Python 3 and Poetry:**
-   - Download and install [Python 3](https://www.python.org/downloads/).
-   - Install [Poetry](https://python-poetry.org/docs/#installation).
+## Quick Start (Production)
 
-2. **Install dependencies:**
-   ```sh
+1. **Clone the repository and prepare word vectors**
+   - Place your GloVe and words.txt files in the `word_vector/` directory.
+
+2. **Build and run with Docker Compose**
+   ```powershell
+   docker compose up --build
+   ```
+   - The `word_vector/` folder is mounted into the container as a read-only volume.
+   - The app will be available at http://localhost:8080
+
+3. **Set your secret key**
+   - Edit `docker-compose.yml` and set a strong value for `SECRET_KEY`.
+
+## Local Development
+
+1. **Install dependencies**
+   ```powershell
+   pip install poetry
    poetry install
    ```
-
-3. **Download GloVe model:**
-   - Download `glove.840B.300d.zip` from [GloVe Project Page](https://nlp.stanford.edu/projects/glove/).
-   - Place `glove.840B.300d.zip` in the `word_vector/` directory.
-   - Unzip it so that `glove.840B.300d.txt` is also in `word_vector/`.
-
-4. **Run the script:**
-   ```sh
-   poetry run python main.py <csv_file_path>
-   ```
-   - Replace `<csv_file_path>` with the path to your input CSV file.
-
-5. **Run unit tests:**
-   ```sh
-   poetry run pytest test_main.py
+2. **Run the app**
+   ```powershell
+   poetry run python main.py
    ```
 
-## Notes
-- The script expects a column named `test` in your CSV file by default. Adjust `NOUNS_HEADER` in `main.py` if needed.
-- The GloVe model is large (~2GB). Ensure you have enough disk space.
-- For more details, see `dat_src/README.md`.
+## Testing
+
+The application includes comprehensive tests that run without requiring the large word vector files:
+
+```powershell
+# Run all tests
+poetry run python run_tests.py
+
+# Run with pytest directly
+poetry run pytest test_main.py -v
+
+# Run with coverage
+poetry run pytest test_main.py --cov=main --cov-report=html
+```
+
+**Testing Features:**
+- **Mock DAT Model**: Tests use a mock model that doesn't require word vector files
+- **CI/CD Ready**: GitHub Actions workflow runs tests automatically
+- **Comprehensive Coverage**: Tests cover all routes, file uploads, form validation, and error handling
+- **No Large Files**: Tests work without the 5GB+ GloVe files
+
+See `TESTING.md` for detailed testing documentation.
+
+## Project Structure
+- `main.py` - Flask web server
+- `word_vector/` - GloVe vectors and words.txt (required for production, not in git)
+- `static/` - CSS for web UI
+- `test_data/` - Example/test CSV files (not included in Docker image)
+- `test_main.py` - Comprehensive test suite
+- `run_tests.py` - Test runner script
+- `prod_config.py` - Production Flask config
+- `Dockerfile` - Production container build (uses python:3.12-alpine, excludes word_vector)
+- `docker-compose.yml` - Mounts word_vector as a volume, sets environment variables
+- `.github/workflows/tests.yml` - GitHub Actions CI/CD pipeline
+- `.dockerignore`/`.gitignore` - Exclude dev, test, and large files from builds and git
+
+## Security & Production Notes
+- Only HTTPS is allowed in production (HTTP is redirected)
+- All secrets (SECRET_KEY) must be set via environment variables
+- Uploaded files are stored in secure temp locations
+- The app is served by Waitress (WSGI) in production
+
+## Running Tests
+- Tests and test data are excluded from the Docker image.
+- To run tests locally:
+  ```powershell
+  poetry run pytest
+  ```
+
+---
+
+For more details, see comments in `main.py` and the configuration files.

@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # DAT Score Calculator Application
+  dat-score-app:
+    build: .
+    container_name: dat-score-app
+    restart: unless-stopped
+    environment:
+      - SECRET_KEY=your-super-secret-key-here
+      - SESSION_COOKIE_SECURE=true
+      - PROXY_FIX=true
+      - PREFERRED_URL_SCHEME=https
+    volumes:
+      - ./word_vector:/app/word_vector:ro
+      - ./static:/app/static:ro
+    networks:
+      - dat-score-network
+    # Don't expose port directly - only through proxy
+    # ports:
+    #   - "5000:5000"
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: dat-score-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro  # SSL certificates
+      - ./static:/var/www/static:ro  # Serve static files directly
+    depends_on:
+      - dat-score-app
+    networks:
+      - dat-score-network
+
+networks:
+  dat-score-network:
+    driver: bridge 
