@@ -7,9 +7,24 @@ import tempfile
 import logging
 from flask import Flask, request, send_file, render_template_string, redirect, url_for, session
 from dat import Model
+import prod_config
 
 app = Flask(__name__)
-app.secret_key = 'dat_secret_key'  # Needed for session
+app.config.from_object('prod_config')
+
+# Configure proxy support
+if app.config.get('PROXY_FIX', False):
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-placeholder-key')  # Needed for session
+
+# Enforce HTTPS in production
+# @app.before_request
+# def enforce_https():
+#     if not request.is_secure and not app.debug:
+#         url = request.url.replace('http://', 'https://', 1)
+#         return redirect(url, code=301)
 
 # Initialize DAT model at server start
 logging.basicConfig(level=logging.INFO)
@@ -21,31 +36,69 @@ logging.info("DAT model loaded successfully.")
 
 UPLOAD_FORM = '''
 <!doctype html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DAT Score Calculator</title>
   <link rel="stylesheet" href="/static/dat_score_app.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
-<h1>Upload CSV File</h1>
-<form method=post enctype=multipart/form-data>
-  <input type=file name=file accept=".csv">
-  <br><br>
-  <label for="skip_rows">Rows to skip (header + metadata):</label>
-  <input type="number" name="skip_rows" id="skip_rows" value="1" min="0" max="100" style="width:60px;">
-  <br><br>
-  <input type=submit value=Upload>
-</form>
+  <div class="container">
+    <header class="app-header">
+      <div class="header-content">
+        <span class="material-icons header-icon">analytics</span>
+        <h1 class="app-title">DAT Score Calculator</h1>
+      </div>
+    </header>
+    
+    <main class="main-content">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Upload CSV File</h2>
+          <p class="card-subtitle">Upload your CSV file to begin calculating creativity scores</p>
+        </div>
+        
+        <div class="card-content">
+          <form method="post" enctype="multipart/form-data" class="upload-form">
+            <div class="form-group">
+              <label for="file" class="form-label">CSV File</label>
+              <div class="file-input-container">
+                <input type="file" name="file" id="file" accept=".csv" class="file-input" required>
+                <label for="file" class="file-input-label">
+                  <span class="material-icons">upload_file</span>
+                  <span>Choose a CSV file</span>
+                </label>
+              </div>
+            </div>
+            
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">
+                <span class="material-icons">upload</span>
+                Upload File
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
 </body>
 </html>
 '''
 
 SELECT_FORM = '''
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <title>Select Columns</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Select Columns - DAT Score Calculator</title>
   <link rel="stylesheet" href="/static/dat_score_app.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <script>
     function updatePreview() {
       document.getElementById('action').value = 'preview';
@@ -54,68 +107,151 @@ SELECT_FORM = '''
   </script>
 </head>
 <body>
-<h1>Select Columns for DAT Calculation</h1>
-<form method=post action="{{ url_for('select_columns') }}" id="select-form">
-  <label for="columns">Select columns to use as words (hold Ctrl to select multiple):</label><br>
-  <select name="columns" id="columns" multiple size="10" required>
-    {% for col in columns %}
-      <option value="{{ col }}">{{ col }}</option>
-    {% endfor %}
-  </select><br><br>
-  <label for="min_word_count">Minimum word count:</label>
-  <input type="number" name="min_word_count" id="min_word_count" value="7" min="1" max="20"><br><br>
-  <label for="skip_rows">Rows to skip (header + metadata):</label>
-  <input type="number" name="skip_rows" id="skip_rows" value="{{ skip_rows }}" min="0" max="100" style="width:60px;" onchange="updatePreview()">
-  <input type="hidden" name="action" id="action" value="">
-  <input type="submit" name="action" value="Calculate Score">
-</form>
-<h2>Preview of Uploaded Data</h2>
-<div class="table-scroll">
-<table class="dat-table">
-  <thead>
-    <tr>{% for col in columns %}<th>{{ col }}</th>{% endfor %}</tr>
-  </thead>
-  <tbody>
-  {% for row in rows %}
-    <tr>
-      {% for cell in row %}<td>{{ cell }}</td>{% endfor %}
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-</div>
+  <div class="container">
+    <header class="app-header">
+      <div class="header-content">
+        <span class="material-icons header-icon">analytics</span>
+        <h1 class="app-title">DAT Score Calculator</h1>
+      </div>
+    </header>
+    
+    <main class="main-content">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Select Columns for DAT Calculation</h2>
+          <p class="card-subtitle">Choose which columns to use for creativity score calculation</p>
+        </div>
+        
+        <div class="card-content">
+          <form method="post" action="{{ url_for('select_columns') }}" id="select-form" class="select-form">
+            <div class="form-group">
+              <label for="columns" class="form-label">Select columns to use as words</label>
+              <p class="form-hint">Hold Ctrl to select multiple, hold Shift to select range</p>
+              <select name="columns" id="columns" multiple size="10" required class="form-select">
+                {% for col in columns %}
+                  <option value="{{ col }}">{{ col }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="min_word_count" class="form-label">Minimum word count</label>
+                <input type="number" name="min_word_count" id="min_word_count" value="7" min="1" max="20" class="form-input">
+              </div>
+              
+              <div class="form-group">
+                <label for="skip_rows" class="form-label">Rows to skip (header + metadata)</label>
+                <input type="number" name="skip_rows" id="skip_rows" value="{{ skip_rows }}" min="0" max="100" class="form-input" onchange="updatePreview()">
+              </div>
+            </div>
+            
+            <input type="hidden" name="action" id="action" value="">
+            
+            <div class="form-actions">
+              <button type="submit" name="action" value="Calculate Score" class="btn btn-primary">
+                <span class="material-icons">calculate</span>
+                Calculate Score
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Preview of Uploaded Data</h2>
+        </div>
+        <div class="card-content">
+          <div class="table-scroll">
+            <table class="dat-table">
+              <thead>
+                <tr>{% for col in columns %}<th>{{ col }}</th>{% endfor %}</tr>
+              </thead>
+              <tbody>
+              {% for row in rows %}
+                <tr>
+                  {% for cell in row %}<td>{{ cell }}</td>{% endfor %}
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
 </body>
 </html>
 '''
 
 RESULTS_TEMPLATE = '''
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <title>DAT Score Results</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Results - DAT Score Calculator</title>
   <link rel="stylesheet" href="/static/dat_score_app.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
-<h1>DAT Score Results</h1>
-<form method="get" action="{{ url_for('download') }}">
-  <button type="submit">Download full Results as CSV</button>
-</form>
-<br>
-<div class="table-scroll">
-<table class="dat-table">
-  <thead>
-    <tr>{% for col in columns %}<th>{{ col }}</th>{% endfor %}<th>{{ score_col }}</th></tr>
-  </thead>
-  <tbody>
-  {% for row, score in results %}
-    <tr>
-      {% for cell in row %}<td>{{ cell }}</td>{% endfor %}
-      <td>{{ score }}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-</div>
+  <div class="container">
+    <header class="app-header">
+      <div class="header-content">
+        <span class="material-icons header-icon">analytics</span>
+        <h1 class="app-title">DAT Score Calculator</h1>
+      </div>
+    </header>
+    
+    <main class="main-content">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">DAT Score Results</h2>
+          <p class="card-subtitle">Your creativity scores have been calculated successfully</p>
+        </div>
+        
+        <div class="card-content">
+          <div class="button-container">
+            <form method="get" action="{{ url_for('download') }}" style="display: inline;">
+              <button type="submit" class="btn btn-primary">
+                <span class="material-icons">download</span>
+                Download Results as CSV
+              </button>
+            </form>
+            <a href="{{ url_for('upload_file') }}" class="btn btn-secondary">
+              <span class="material-icons">restart_alt</span>
+              Start Over
+            </a>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Results Table</h2>
+        </div>
+        <div class="card-content">
+          <div class="table-scroll">
+            <table class="dat-table">
+              <thead>
+                <tr>{% for col in columns %}<th>{{ col }}</th>{% endfor %}<th>{{ score_col }}</th></tr>
+              </thead>
+              <tbody>
+              {% for row, score in results %}
+                <tr>
+                  {% for cell in row %}<td>{{ cell }}</td>{% endfor %}
+                  <td class="score-cell">{{ score }}</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
 </body>
 </html>
 '''
@@ -198,7 +334,7 @@ def select_columns():
     with tempfile.NamedTemporaryFile(delete=False, suffix='.csv', mode='w', newline='', encoding='utf-8') as tmp_out:
         writer = csv.writer(tmp_out)
         writer.writerow(header + [score_col])
-        # Write skipped rows (without score column)
+        # Write skipped rows (without score column
         for i in range(skip_rows-1):
             if i < len(all_rows):
                 writer.writerow(all_rows[i])

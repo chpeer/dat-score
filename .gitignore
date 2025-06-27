@@ -66,3 +66,6 @@ word_vector/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Test data
+test_data/
