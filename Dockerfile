@@ -1,10 +1,17 @@
 # Stage 1: Build dependencies and install Python packages
-FROM python:3.13.5-alpine AS builder
+FROM python:3.13.5-slim AS builder
 
 WORKDIR /app
 
 # Install build dependencies
-RUN apk add --no-cache build-base gcc musl-dev libffi-dev
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    g++ \
+    make \
+    pkg-config \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
 RUN pip install --upgrade pip && pip install poetry
@@ -19,16 +26,13 @@ RUN poetry config virtualenvs.create false \
 # Copy the rest of the code (for building wheels if needed)
 COPY . .
 
-# Stage 2: Minimal runtime image
-FROM python:3.13.5-alpine
+# Stage 2: Runtime image
+FROM python:3.13.5-slim
 
 WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-
-# Install runtime dependencies only (no build tools)
-RUN pip install --upgrade pip
 
 # Copy installed packages from builder
 COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
