@@ -1,6 +1,7 @@
-<!--
-NOTE: This project was created with the assistance of AI. It is not intended for production use and must not be exposed to the internet. The server and code are not security-audited and may contain vulnerabilities. Use only in a safe, isolated environment for demonstration or research purposes.
--->
+> [!WARNING]  
+> This project was created with the assistance of AI. It is not intended for production use and must not be exposed to the internet. 
+> The server and code are not security-audited and may contain vulnerabilities. Use only in a safe, isolated environment for demonstration or research purposes.
+
 # DAT Score Web App
 
 This project provides a web interface for calculating Divergent Association Task (DAT) creativity scores from CSV files using GloVe word vectors.
