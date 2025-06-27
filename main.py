@@ -29,12 +29,22 @@ app.secret_key = os.environ.get('SECRET_KEY', 'dev-placeholder-key')  # Needed f
 # Initialize DAT model at server start
 logging.basicConfig(level=logging.INFO)
 logging.info("Starting DAT Score Calculator application...")
-logging.info("Loading DAT model from word vectors...")
-DAT_MODEL = Model(
-    model="word_vector/glove.840B.300d.txt",
-    dictionary="word_vector/words.txt"
-)
-logging.info("DAT model loaded successfully.")
+
+# Only load the DAT model if not in testing mode
+if not app.config.get('TESTING', False):
+    logging.info("Loading DAT model from word vectors...")
+    DAT_MODEL = Model(
+        model="word_vector/glove.840B.300d.txt",
+        dictionary="word_vector/words.txt"
+    )
+    logging.info("DAT model loaded successfully.")
+else:
+    # Create a mock model for testing
+    logging.info("Running in test mode - using mock DAT model")
+    class MockModel:
+        def dat(self, *args, **kwargs):
+            return 0.75  # Return a reasonable test score
+    DAT_MODEL = MockModel()
 
 UPLOAD_FORM = '''
 <!doctype html>

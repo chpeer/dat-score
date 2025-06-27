@@ -10,12 +10,21 @@ from main import app
 from flask import session
 import io
 
+# Mock the DAT_MODEL at module level to prevent loading large files during tests
+@pytest.fixture(autouse=True)
+def mock_dat_model():
+    """Mock the DAT_MODEL to prevent loading large word vector files during tests."""
+    with patch('main.DAT_MODEL') as mock:
+        # Create a mock model that returns a reasonable score
+        mock.dat.return_value = 0.75
+        yield mock
+
 @pytest.fixture
 def client():
-    """Create a test client for the Flask application."""
+    """Create a test client for the Flask app."""
     app.config['TESTING'] = True
-    app.config['SECRET_KEY'] = 'test-secret-key'
     app.config['WTF_CSRF_ENABLED'] = False
+    app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB limit for testing
     
     with app.test_client() as client:
         with app.app_context():

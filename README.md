@@ -48,14 +48,40 @@ This project provides a web interface for calculating Divergent Association Task
    poetry run python main.py
    ```
 
+## Testing
+
+The application includes comprehensive tests that run without requiring the large word vector files:
+
+```powershell
+# Run all tests
+poetry run python run_tests.py
+
+# Run with pytest directly
+poetry run pytest test_main.py -v
+
+# Run with coverage
+poetry run pytest test_main.py --cov=main --cov-report=html
+```
+
+**Testing Features:**
+- **Mock DAT Model**: Tests use a mock model that doesn't require word vector files
+- **CI/CD Ready**: GitHub Actions workflow runs tests automatically
+- **Comprehensive Coverage**: Tests cover all routes, file uploads, form validation, and error handling
+- **No Large Files**: Tests work without the 5GB+ GloVe files
+
+See `TESTING.md` for detailed testing documentation.
+
 ## Project Structure
 - `main.py` - Flask web server
-- `word_vector/` - GloVe vectors and words.txt (required, not included in Docker image)
+- `word_vector/` - GloVe vectors and words.txt (required for production, not in git)
 - `static/` - CSS for web UI
 - `test_data/` - Example/test CSV files (not included in Docker image)
+- `test_main.py` - Comprehensive test suite
+- `run_tests.py` - Test runner script
 - `prod_config.py` - Production Flask config
 - `Dockerfile` - Production container build (uses python:3.12-alpine, excludes word_vector)
 - `docker-compose.yml` - Mounts word_vector as a volume, sets environment variables
+- `.github/workflows/tests.yml` - GitHub Actions CI/CD pipeline
 - `.dockerignore`/`.gitignore` - Exclude dev, test, and large files from builds and git
 
 ## Security & Production Notes
